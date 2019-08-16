@@ -1,0 +1,57 @@
+---
+title: "Regression Analysis of A/B test"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Motivation
+
+It is challenging to to analyze experiments in a unified and flexible way. For example, click through or sign-up follow binomial distribution, orders per user per week follow Poisson distribution and the amount of money spent on Ritual follow Gaussian distribution (after normalization since it should have negative values). So, it is difficult to choose the correct statistical test for analysis. 
+
+Secondly, it is difficult to measure cohort effect in terms different sign-up location (metro_id) and sign-up time(weekly cohort). Running different test within each group may loose statistical significance or may run into Simpson's Paradox in the very end. 
+
+In order to solve the problem, I proposed alternative approach, regression models. That is to say, we may try to use logistic regression to solve binomial statistical inference, use Poisson regression and simple linear regression to solve other problems accordingly. 
+
+To illustrate my point more, I used the following fake data for illustration purposes. 
+
+
+## Logistic Regression
+
+I created some fake click data by binomial distribution and run a logistic regression. Regress city, sign-up channel, tenure and experiment id on click.
+
+```{r, echo=FALSE}
+setwd("~/Desktop/weclouddata/data")
+library(tidyverse)
+library(knitr)
+library(jtools)
+user <- read_csv("user_table.csv")
+user$channel <- as.character(user$channel)
+user$experiment <- c(rep(0, 10000), rep(1, 6000))
+user$click <- c(rbinom(10000, 1, 0.03), rbinom(6000, 1, 0.06))
+user %>% glimpse()
+# Binomial check the model
+model1 <- glm(click ~ city + tenure + channel + experiment, family = binomial, data = user)
+summ(model1)
+```
+
+
+by noticing experiment's regression coefficient's p-value is less than $10^{-10}$, we may conclude with high statistical confidence that in this case, the experiment drastically changed users' click through behavior across all metro and channel. 
+
+
+## Linear Regression
+
+To analyze the average opu for a user in the past 6 weeks, we may use linear regression since the variable should be continuous. Before running regression, centering and scaling have been applied. 
+```{r}
+user$opu_6_week <-  scale(user$opu_6_week)
+model2 <- glm(opu_6_week ~ city + tenure + channel + experiment, family = gaussian, data = user)
+summ(model2)
+```
+
+
+This time, experiment's coefficient is not significant anymore and we may conclude that this feature haven't been changed(deteriorate) by the experiment. 
+
+
+
