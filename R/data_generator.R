@@ -19,4 +19,5 @@ summary(model1)
 
 
 # write_csv(user, "experimental_data.csv")
-
+library(bayesAB)
+plotBeta(100, 200)
